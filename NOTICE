@@ -222,8 +222,8 @@ License Text:
 -------------------------------------------------------------------------------
 License: Apache License 2.0
 Used by:
-- zerocopy-derive v0.8.42
-- zerocopy v0.8.42
+- zerocopy-derive v0.8.47
+- zerocopy v0.8.47
 
 License Text:
                                  Apache License
@@ -1066,7 +1066,7 @@ License Text:
 -------------------------------------------------------------------------------
 License: Apache License 2.0
 Used by:
-- lockfree-ringbuf v0.1.0
+- cyclotrace v0.1.0
 
 License Text:
                                  Apache License
@@ -1721,7 +1721,7 @@ License: Apache License 2.0
 Used by:
 - anes v0.1.6
 - half v2.7.1
-- itoa v1.0.17
+- itoa v1.0.18
 - libc v0.2.183
 - proc-macro2 v1.0.106
 - quote v1.0.45
