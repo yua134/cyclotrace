@@ -6,24 +6,33 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: ${{ matrix.test_type }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        test_type: [standard, loom]
 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
         with:
-          toolchain: stable
-          override: true
+          key: ${{ matrix.os }}-${{ matrix.test_type }}
 
-      - name: Build project
-        run: cargo build --features all --verbose
+      - name: Run Standard Tests
+        if: matrix.test_type == 'standard'
+        run: cargo test --features alloc,arrayvec,heapless --verbose
 
-      - name: Run tests
-        run: cargo test --features all --verbose
+      - name: Run Loom Tests
+        if: matrix.test_type == 'loom'
+        run: cargo test --features loom --verbose
+        env:
+          RUSTFLAGS: "--cfg loom"
