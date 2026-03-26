@@ -23,8 +23,8 @@ cfg-if = "1.0.4"
 crossbeam-utils = { version = "0.8.21" , default-features = false}
 loom = { version = "0.7.2" , optional = true }
 
-heapless = { version = "*", optional = true }
-arrayvec = { version = "*", default-features = false, optional = true }
+heapless = { version = "0.9.1", optional = true }
+arrayvec = { version = "0.7.6", default-features = false, optional = true }
 
 [dev-dependencies]
 criterion = "0.8.2"
