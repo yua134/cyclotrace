@@ -13,6 +13,13 @@ Cyclotrace is a wait-free ring buffer implementation in Rust, designed for high-
 - Support for `no_std` environments, making it suitable for embedded systems.
 - Comprehensive tests using the Loom framework to ensure correctness under concurrent scenarios.
 
+## Use Cases
+
+- audio processing
+- telemetry data collection
+- sensor data buffering
+- real-time logging
+
 ## Usage
 Add the following to your `Cargo.toml`:
 

@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 authors = ["yua"]
 exclude = ["/.history/**", "/.github/**", "notice.hbs"]
 keywords = ["wait-free", "lock-free", "ring-buffer", "spmc"]
-categories = ["concurrency", "data-structures", "no-std::no-alloc"]
+categories = ["concurrency", "data-structures", "no-std::no-alloc", "multimedia::audio", "science::robotics"]
 description = "A high-performance, wait-free ring buffer in Rust. Supports SPMC with peek-based semantics instead of destructive consumption."
 
 [features]

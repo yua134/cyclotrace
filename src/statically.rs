@@ -22,7 +22,7 @@ use crate::{buffer::Buffer, sink::Sink};
 /// let writer = MY_BUF.get_writer().unwrap();
 /// writer.write(42);
 ///
-/// assert_eq!(MY_BUF.get(0), Some(42));
+/// assert_eq!(MY_BUF.read_latest(), 42);
 /// ```
 macro_rules! static_buffer {
     ($vis:vis static $name:ident::<$ty:ty, $lit:literal>) => {
@@ -66,7 +66,7 @@ impl<T: Copy, const N: usize> StaticBuffer<T, N> {
 
     #[inline]
     /// Gets a writer for the buffer. This function returns `None` if there is already a writer.
-    pub fn get_writer(&'static self) -> Option<Writer<T, N>> {
+    pub fn get_writer(&self) -> Option<Writer<'_, T, N>> {
         if self
             .writer
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Relaxed)
@@ -161,6 +161,7 @@ impl<T: Copy, const N: usize> StaticBuffer<T, N> {
     ///
     /// This is a convenience method for [`Self::read(0)`](Self::read).
     pub fn read_latest(&self) -> T {
+        // SAFETY: 0 is always less than N - 1, so this function won't return None.
         self.read(0).unwrap()
     }
 
@@ -187,17 +188,23 @@ impl<T: Copy, const N: usize> StaticBuffer<T, N> {
     }
 }
 
-pub struct Writer<T: 'static, const N: usize> {
-    buf: &'static StaticBuffer<T, N>,
+/// A writer for the buffer. This struct is not thread-safe, so it must be used by only one thread.
+pub struct Writer<'a, T: 'a, const N: usize> {
+    buf: &'a StaticBuffer<T, N>,
     _marker: core::marker::PhantomData<Cell<()>>,
 }
-impl<T: Copy + 'static, const N: usize> Writer<T, N> {
+impl<'a, T: Copy + 'a, const N: usize> Writer<'a, T, N> {
     #[inline]
+    /// Writes a value to the buffer. This function must be called only one thread.
+    ///
+    /// If the buffer is full, the oldest value will be overwritten.
+    ///
+    /// This function is wait-free, so it will never block the thread.
     pub fn write(&self, value: T) {
         self.buf.buf.write(value);
     }
 }
-impl<T: 'static, const N: usize> Drop for Writer<T, N> {
+impl<'a, T: 'a, const N: usize> Drop for Writer<'a, T, N> {
     #[inline]
     fn drop(&mut self) {
         self.buf.writer.store(false, Ordering::Release);

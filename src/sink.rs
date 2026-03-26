@@ -1,5 +1,5 @@
 #[allow(clippy::len_without_is_empty)]
-/// A trait for writing data into a buffer. This is used to abstract over different types of buffers, such as `Vec<T>`, `&mut [T]`, and `[T; N]`.
+/// A trait for writing data into a buffer. This is used to abstract over different types of buffers, such as `Vec<T>`, `[T]`, and `[T; N]`.
 pub trait Sink {
     type Item: Copy;
 
