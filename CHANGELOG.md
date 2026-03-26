@@ -1,8 +1,8 @@
 # v0.1.0 Initial release
 
-**date: 2026-n-n**
+**date: 2026-3-26**
 
-[source]()
+[source](https://github.com/yua134/cyclotrace/tree/v0.1.0)
 
 ## Added
 
