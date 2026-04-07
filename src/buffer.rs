@@ -1,46 +1,31 @@
 use core::{
-    cell::UnsafeCell,
-    mem::{self, MaybeUninit},
+    mem::MaybeUninit,
     ops::RangeBounds,
 };
 
-use super::{AtomicU64, Ordering, spin_loop};
+use super::{AtomicU64, Ordering, UnsafeCell, spin_loop};
 
 use crossbeam_utils::CachePadded;
 
 use crate::{sink::Sink, util::init_array};
 
 pub(crate) struct Buffer<T, const N: usize> {
-    data: [Slot<T>; N],
+    data: [CachePadded<Slot<T>>; N],
     tail: CachePadded<AtomicU64>,
 }
 impl<T: Copy, const N: usize> Buffer<T, N> {
-    cfg_if::cfg_if!(
-    if #[cfg(feature = "loom")] {
-        pub(crate) fn new() -> Self {
-            const {
-                assert!(N > 1, "Buffer size must be greater than 1");
-                assert!(N.is_power_of_two(), "Buffer size should be a power of 2 for better performance");
-            }
-            Self {
-                data: init_array(),
-                tail: CachePadded::new(AtomicU64::new(0)),
-            }
+    #[cfg_attr(feature = "loom", maybe_const::maybe_const)]
+    #[inline(always)]
+    pub(crate) const fn new() -> Self {
+        const {
+            assert!(N > 1, "Buffer size must be greater than 1");
+            assert!(N.is_power_of_two(), "Buffer size should be a power of 2 for better performance");
         }
-    } else {
-        #[inline(always)]
-        pub(crate) const fn new() -> Self {
-            const {
-                assert!(N > 1, "Buffer size must be greater than 1");
-                assert!(N.is_power_of_two(), "Buffer size should be a power of 2 for better performance");
-            }
-            Self {
-                data: init_array(),
-                tail: CachePadded::new(AtomicU64::new(0)),
-            }
+        Self {
+            data: init_array(),
+            tail: CachePadded::new(AtomicU64::new(0)),
         }
     }
-    );
 
     #[inline(always)]
     pub(crate) fn is_empty(&self) -> bool {
@@ -141,23 +126,18 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
 
         // ring buffer is not wrapped around
         if slot_latest < slot_old {
-            // SAFETY: Slot<T> is #[repr(transparent)], so &[Slot<T>] can be transmuted to &[T].
-            let slice1 = unsafe { mem::transmute::<&[Slot<T>], &[T]>(&self.data[slot_old..]) };
-            let slice2 = unsafe { mem::transmute::<&[Slot<T>], &[T]>(&self.data[..=slot_latest]) };
+            let slice1 = &self.data[slot_old..];
+            let slice2 = &self.data[..=slot_latest];
 
-            // SAFETY: buffer capacity is reserved
-            unsafe {
-                buf.extend(len, slice1);
-                buf.extend(len + slice1.len(), slice2);
+            for (i, slot) in slice1.iter().chain(slice2.iter()).enumerate() {
+                buf.push(slot.read(), i);
             }
         } else {
             // SAFETY: Slot<T> is #[repr(transparent)], so &[Slot<T>] can be transmuted to &[T].
-            let slice =
-                unsafe { mem::transmute::<&[Slot<T>], &[T]>(&self.data[slot_old..=slot_latest]) };
+            let slice = &self.data[slot_old..=slot_latest];
 
-            // SAFETY: buffer capacity is reserved
-            unsafe {
-                buf.extend(len, slice);
+            for (i, slot) in slice.iter().enumerate() {
+                buf.push(slot.read(), i);
             }
         }
 
@@ -288,24 +268,18 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
             // ring buffer is not wrapped around
             if slot_latest < slot_old {
                 // SAFETY: Slot<T> is #[repr(transparent)], so &[Slot<T>] can be transmuted to &[T].
-                let slice1 = unsafe { mem::transmute::<&[Slot<T>], &[T]>(&self.data[slot_old..]) };
-                let slice2 =
-                    unsafe { mem::transmute::<&[Slot<T>], &[T]>(&self.data[..=slot_latest]) };
+                let slice1 = &self.data[slot_old..];
+                let slice2 = &self.data[..=slot_latest];
 
-                // SAFETY: buffer capacity is reserved
-                unsafe {
-                    buf.extend(len, slice1);
-                    buf.extend(len + slice1.len(), slice2);
+                for (i, slot) in slice1.iter().chain(slice2.iter()).enumerate() {
+                    buf.push(slot.read(), i);
                 }
             } else {
                 // SAFETY: Slot<T> is #[repr(transparent)], so &[Slot<T>] can be transmuted to &[T].
-                let slice = unsafe {
-                    mem::transmute::<&[Slot<T>], &[T]>(&self.data[slot_old..=slot_latest])
-                };
+                let slice = &self.data[slot_old..=slot_latest];
 
-                // SAFETY: buffer capacity is reserved
-                unsafe {
-                    buf.extend(len, slice);
+                for (i, slot) in slice.iter().enumerate() {
+                    buf.push(slot.read(), i);
                 }
             }
 
@@ -330,12 +304,14 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
 pub(crate) struct Slot<T>(UnsafeCell<MaybeUninit<T>>);
 
 impl<T: Copy> Slot<T> {
+    #[cfg_attr(feature = "loom", maybe_const::maybe_const)]
     #[inline(always)]
     pub(crate) const fn new() -> Self {
         Self(UnsafeCell::new(MaybeUninit::uninit()))
     }
 
     #[inline(always)]
+    #[cfg(not(feature = "loom"))]
     const fn write(&self, value: T) {
         unsafe {
             self.0.get().write(MaybeUninit::new(value));
@@ -343,8 +319,24 @@ impl<T: Copy> Slot<T> {
     }
 
     #[inline(always)]
+    #[cfg(feature = "loom")]
+    fn write(&self, value: T) {
+        unsafe {
+            self.0.get_mut().deref().write(value);
+        }
+    }
+
+
+    #[inline(always)]
+    #[cfg(not(feature = "loom"))]
     const fn read(&self) -> T {
         unsafe { (*self.0.get()).assume_init() }
+    }
+
+    #[inline(always)]
+    #[cfg(feature = "loom")]
+    fn read(&self) -> T {
+        unsafe { self.0.get().deref().assume_init_read() }
     }
 }
 unsafe impl<T: Send> Send for Slot<T> {}

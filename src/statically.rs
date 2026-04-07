@@ -36,27 +36,13 @@ pub struct StaticBuffer<T, const N: usize> {
     writer: AtomicBool,
 }
 impl<T: Copy, const N: usize> StaticBuffer<T, N> {
-    cfg_if::cfg_if!(
-    if #[cfg(feature = "loom")] {
-        pub fn new() -> Self {
-            Self {
-                buf: Buffer::new(),
-                writer: AtomicBool::new(false),
-            }
+    #[cfg_attr(feature = "loom", maybe_const::maybe_const)]
+    pub const fn new() -> Self {
+        Self {
+            buf: Buffer::new(),
+            writer: AtomicBool::new(false),
         }
-    } else {
-        #[allow(clippy::new_without_default)]
-        #[inline]
-        /// Creates a new static buffer.
-        ///
-        /// As an alternative to this function, a macro is also available. See [`static_buffer!`](static_buffer!) for more details.
-        pub const fn new() -> Self {
-            Self {
-                buf: Buffer::new(),
-                writer: AtomicBool::new(false),
-            }
-        }
-    });
+    }
 
     #[inline]
     /// Checks if the buffer is empty.

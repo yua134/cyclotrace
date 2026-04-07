@@ -1,38 +1,22 @@
 use core::mem::MaybeUninit;
 
+use crossbeam_utils::CachePadded;
+
 use crate::buffer::Slot;
 
-cfg_if::cfg_if!(
-if #[cfg(feature = "loom")] {
-    pub(crate) fn init_array<T: Copy, const N: usize>() -> [Slot<T>; N] {
-        let mut arr: MaybeUninit<[Slot<T>; N]> = MaybeUninit::uninit();
-        let ptr = arr.as_mut_ptr() as *mut Slot<T>;
-        let mut i = 0;
+#[cfg_attr(feature = "loom", maybe_const::maybe_const)]
+#[inline]
+pub(crate) const fn init_array<T: Copy, const N: usize>() -> [CachePadded<Slot<T>>; N] {
+    let mut arr: MaybeUninit<[CachePadded<Slot<T>>; N]> = MaybeUninit::uninit();
+    let ptr = arr.as_mut_ptr() as *mut CachePadded<Slot<T>>;
+    let mut i = 0;
 
-        while i < N {
-            unsafe {
-                ptr.add(i).write(Slot::new());
-            }
-            i += 1;
+    while i < N {
+        unsafe {
+            ptr.add(i).write(CachePadded::new(Slot::new()));
         }
-
-        unsafe { arr.assume_init() }
+        i += 1;
     }
-} else {
-    #[inline]
-    pub(crate) const fn init_array<T: Copy, const N: usize>() -> [Slot<T>; N] {
-        let mut arr: MaybeUninit<[Slot<T>; N]> = MaybeUninit::uninit();
-        let ptr = arr.as_mut_ptr() as *mut Slot<T>;
-        let mut i = 0;
 
-        while i < N {
-            unsafe {
-                ptr.add(i).write(Slot::new());
-            }
-            i += 1;
-        }
-
-        unsafe { arr.assume_init() }
+    unsafe { arr.assume_init() }
     }
-}
-);

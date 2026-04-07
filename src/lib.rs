@@ -7,9 +7,11 @@ extern crate alloc;
 cfg_if::cfg_if!(
     if #[cfg(feature = "loom")] {
         pub(crate) use loom::sync::{Arc, atomic::{AtomicBool, AtomicU64, Ordering}};
+        pub(crate) use loom::cell::UnsafeCell;
         pub(crate) use loom::hint::spin_loop;
     } else {
         pub(crate) use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+        pub(crate) use core::cell::UnsafeCell;
         pub(crate) use core::hint::spin_loop;
 
         #[cfg(feature = "alloc")]

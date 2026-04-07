@@ -15,13 +15,7 @@ pub trait Sink {
     /// Truncates the buffer to the specified length.
     fn truncate(&mut self, len: usize);
 
-    /// Extends the buffer with the given slice, starting at the specified index. The caller must ensure that the buffer has enough capacity to hold the new data.
-    ///
-    /// # Safety
-    /// This ensures the following invariants, so we can assume them when implementing this method:
-    /// - The buffer has enough capacity to hold the new data.
-    /// - The source and destination must not overlap.
-    unsafe fn extend(&mut self, start: usize, src: &[Self::Item]);
+    fn push(&mut self, item: Self::Item, i: usize);
 }
 
 #[cfg(feature = "alloc")]
@@ -52,15 +46,8 @@ impl<T: Copy> Sink for alloc::vec::Vec<T> {
     }
 
     #[inline(always)]
-    unsafe fn extend(&mut self, start: usize, src: &[Self::Item]) {
-        // SAFETY: the caller must ensure that the buffer has enough capacity to hold the new data, and that the source and destination do not overlap.
-        unsafe {
-            let dst = self.as_mut_ptr().add(start);
-
-            dst.copy_from_nonoverlapping(src.as_ptr(), src.len());
-
-            self.set_len(start + src.len());
-        }
+    fn push(&mut self, item: Self::Item, _i: usize) {
+        self.push(item);
     }
 }
 
@@ -88,13 +75,8 @@ impl<T: Copy + Default> Sink for [T] {
     }
 
     #[inline(always)]
-    unsafe fn extend(&mut self, start: usize, src: &[Self::Item]) {
-        // SAFETY: the caller must ensure that the buffer has enough capacity to hold the new data, and that the source and destination do not overlap.
-        unsafe {
-            let dst = self.as_mut_ptr().add(start);
-
-            dst.copy_from_nonoverlapping(src.as_ptr(), src.len());
-        }
+    fn push(&mut self, item: Self::Item, i: usize) {
+        self[i] = item;
     }
 }
 
@@ -122,13 +104,8 @@ impl<T: Copy + Default, const N: usize> Sink for [T; N] {
     }
 
     #[inline(always)]
-    unsafe fn extend(&mut self, start: usize, src: &[Self::Item]) {
-        // SAFETY: the caller must ensure that the buffer has enough capacity to hold the new data, and that the source and destination do not overlap.
-        unsafe {
-            let dst = self.as_mut_ptr().add(start);
-
-            dst.copy_from_nonoverlapping(src.as_ptr(), src.len());
-        }
+    fn push(&mut self, item: Self::Item, i: usize) {
+        self[i] = item;
     }
 }
 
@@ -160,15 +137,8 @@ impl<const N: usize, T: Copy> Sink for heapless::Vec<T, N> {
     }
 
     #[inline(always)]
-    unsafe fn extend(&mut self, start: usize, src: &[Self::Item]) {
-        // SAFETY: the caller must ensure that the buffer has enough capacity to hold the new data, and that the source and destination do not overlap.
-        unsafe {
-            let dst = self.as_mut_ptr().add(start);
-
-            dst.copy_from_nonoverlapping(src.as_ptr(), src.len());
-
-            self.set_len(start + src.len());
-        }
+    fn push(&mut self, item: Self::Item, _i: usize) {
+        self.push(item).unwrap();
     }
 }
 
@@ -200,14 +170,7 @@ impl<T: Copy, const N: usize> Sink for arrayvec::ArrayVec<T, N> {
     }
 
     #[inline(always)]
-    unsafe fn extend(&mut self, start: usize, src: &[Self::Item]) {
-        // SAFETY: the caller must ensure that the buffer has enough capacity to hold the new data, and that the source and destination do not overlap.
-        unsafe {
-            let dst = self.as_mut_ptr().add(start);
-
-            dst.copy_from_nonoverlapping(src.as_ptr(), src.len());
-
-            self.set_len(start + src.len());
-        }
+    fn push(&mut self, item: Self::Item, _i: usize) {
+        self.push(item);
     }
 }
