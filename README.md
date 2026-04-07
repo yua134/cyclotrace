@@ -25,7 +25,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cyclotrace = "0.1.0"
+cyclotrace = "0.2.0"
 ```
 
 Then, you can use the `RingBuf` struct to create a wait-free ring buffer:
@@ -81,9 +81,9 @@ std::thread::spawn({
 compare with crossbeam's `crossbeam_channel::bounded`
 | elements | cyclotrace (ns) | crossbeam (ns) |
 |------------|-----------------|-----------------|
-| 2 | 74.5 | 162.8 |
-| 64 | 11.4 | 66.4 |
-| 1024 | 8.45 | 65.3 |
+| 2 | 56.1 | 166.7 |
+| 64 | 7.7 | 68.1 |
+| 1024 | 15.1 | 67.9 |
 
 ## License
 
