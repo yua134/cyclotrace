@@ -1,7 +1,4 @@
-use core::{
-    mem::MaybeUninit,
-    ops::RangeBounds,
-};
+use core::{mem::MaybeUninit, ops::RangeBounds};
 
 use super::{AtomicU64, Ordering, UnsafeCell, spin_loop};
 
@@ -19,7 +16,10 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
     pub(crate) const fn new() -> Self {
         const {
             assert!(N > 1, "Buffer size must be greater than 1");
-            assert!(N.is_power_of_two(), "Buffer size should be a power of 2 for better performance");
+            assert!(
+                N.is_power_of_two(),
+                "Buffer size should be a power of 2 for better performance"
+            );
         }
         Self {
             data: init_array(),
@@ -325,7 +325,6 @@ impl<T: Copy> Slot<T> {
             self.0.get_mut().deref().write(value);
         }
     }
-
 
     #[inline(always)]
     #[cfg(not(feature = "loom"))]

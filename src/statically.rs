@@ -36,6 +36,7 @@ pub struct StaticBuffer<T, const N: usize> {
     writer: AtomicBool,
 }
 impl<T: Copy, const N: usize> StaticBuffer<T, N> {
+    #[allow(clippy::new_without_default)]
     #[cfg_attr(feature = "loom", maybe_const::maybe_const)]
     pub const fn new() -> Self {
         Self {

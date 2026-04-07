@@ -19,4 +19,4 @@ pub(crate) const fn init_array<T: Copy, const N: usize>() -> [CachePadded<Slot<T
     }
 
     unsafe { arr.assume_init() }
-    }
+}

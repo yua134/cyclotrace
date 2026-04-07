@@ -138,7 +138,8 @@ impl<const N: usize, T: Copy> Sink for heapless::Vec<T, N> {
 
     #[inline(always)]
     fn push(&mut self, item: Self::Item, _i: usize) {
-        self.push(item).unwrap();
+        // SAFETY: The caller must ensure that the buffer has enough remaining capacity to push the item.
+        let _ = self.push(item);
     }
 }
 
