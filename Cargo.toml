@@ -1,6 +1,6 @@
 [package]
 name = "cyclotrace"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/yua134/cyclotrace"
@@ -14,30 +14,31 @@ description = "A high-performance, wait-free ring buffer in Rust. Supports SPMC 
 [features]
 default = ["alloc"]
 alloc = []
-loom = ["dep:loom"]
+portable-atomic = ["dep:portable-atomic", "condtype"]
+loom = ["dep:loom", "alloc"]
 arrayvec = ["dep:arrayvec"]
 heapless = ["dep:heapless"]
 
 [dependencies]
-cfg-if = "1.0.4"
-crossbeam-utils = { version = "0.8.21" , default-features = false}
+cfg-if = "1"
+crossbeam-utils = { version = "0.8" , default-features = false}
+bytemuck = "1"
+portable-atomic = { version = "1", optional = true }
+condtype = { version = "1", optional = true }
+
 loom = { version = "0.7.2" , optional = true }
 
-maybe_const = "0.1.0"
-
-heapless = { version = "0.9.1", optional = true }
-arrayvec = { version = "0.7.6", default-features = false, optional = true }
+heapless = { version = "0.9", optional = true }
+arrayvec = { version = "0.7", default-features = false, optional = true }
 
 [dev-dependencies]
 criterion = "0.8.2"
-crossbeam-channel = "0.5.15"
+spmc_buffer = "0.5.2"
+ringcast = "0.1.1"
+windows-sys = { version = "0.61.2", features = ["Win32_System_Threading"] }
 
 [[bench]]
-name = "single"
-harness = false
-
-[[bench]]
-name = "compare"
+name = "basic"
 harness = false
 
 [profile]

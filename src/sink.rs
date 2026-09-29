@@ -1,25 +1,46 @@
-#[allow(clippy::len_without_is_empty)]
-/// A trait for writing data into a buffer. This is used to abstract over different types of buffers, such as `Vec<T>`, `[T]`, and `[T; N]`.
-pub trait Sink {
-    type Item: Copy;
+use bytemuck::NoUninit;
 
-    /// Returns the current length of the buffer. For a `Vec<T>`, this is `len()`. For a slice or array, this is the length of the slice or array.
+#[allow(clippy::len_without_is_empty)]
+/// A trait for writing data into a buffer. This is used to abstract over different types of buffers, like `Vec<T>`.
+pub trait Sink {
+    type Item: NoUninit;
+
+    /// Returns the current length of the buffer. For a `Vec<T>`, this is `len()`.
     fn len(&self) -> usize;
 
-    /// Returns the remaining capacity of the buffer. For a `Vec<T>`, this is `capacity() - len()`. For a slice or array, this is the length of the slice or array.
+    /// Returns the remaining capacity of the buffer. For a `Vec<T>`, this is `capacity() - len()`.
     fn remain(&self) -> usize;
 
-    /// Reserves additional capacity for the buffer. This is only applicable for `Vec<T>`, and should panic for slices and arrays.
+    /// Reserves additional capacity for the buffer.
     fn reserve(&mut self, additional: usize);
 
-    /// Truncates the buffer to the specified length.
-    fn truncate(&mut self, len: usize);
+    /// Returns a raw pointer to the beginning of the buffer.
+    fn as_mut_ptr(&mut self) -> *mut Self::Item;
 
-    fn push(&mut self, item: Self::Item, i: usize);
+    /// Sets the length of the buffer. For a `Vec<T>`, this is `set_len()`.
+    /// # Safety
+    /// The caller must ensure that the new elements are initialized and new length does not exceed the capacity of the buffer.
+    unsafe fn set_len(&mut self, len: usize);
+}
+
+pub(crate) trait SinkInner {
+    fn as_mut_ptr(&mut self) -> *mut u8;
+}
+impl<T: Sink + ?Sized> SinkInner for T {
+    #[inline(always)]
+    fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.as_mut_ptr() as *mut u8
+    }
+}
+impl<T> SinkInner for core::mem::MaybeUninit<T> {
+    #[inline(always)]
+    fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.as_mut_ptr() as *mut u8
+    }
 }
 
 #[cfg(feature = "alloc")]
-impl<T: Copy> Sink for alloc::vec::Vec<T> {
+impl<T: NoUninit> Sink for alloc::vec::Vec<T> {
     type Item = T;
 
     #[inline(always)]
@@ -38,79 +59,20 @@ impl<T: Copy> Sink for alloc::vec::Vec<T> {
     }
 
     #[inline(always)]
-    fn truncate(&mut self, len: usize) {
-        // SAFETY: T: Copy, so we can safely set the length to a smaller value without dropping any elements.
+    fn as_mut_ptr(&mut self) -> *mut Self::Item {
+        self.as_mut_ptr()
+    }
+
+    #[inline(always)]
+    unsafe fn set_len(&mut self, len: usize) {
         unsafe {
             self.set_len(len);
         }
     }
-
-    #[inline(always)]
-    fn push(&mut self, item: Self::Item, _i: usize) {
-        self.push(item);
-    }
-}
-
-impl<T: Copy + Default> Sink for [T] {
-    type Item = T;
-
-    #[inline(always)]
-    fn len(&self) -> usize {
-        0
-    }
-
-    #[inline(always)]
-    fn remain(&self) -> usize {
-        self.len()
-    }
-
-    #[cold]
-    fn reserve(&mut self, _additional: usize) {
-        unreachable!("cannot reserve additional capacity for a slice");
-    }
-
-    #[inline(always)]
-    fn truncate(&mut self, len: usize) {
-        self[len..].fill(T::default());
-    }
-
-    #[inline(always)]
-    fn push(&mut self, item: Self::Item, i: usize) {
-        self[i] = item;
-    }
-}
-
-impl<T: Copy + Default, const N: usize> Sink for [T; N] {
-    type Item = T;
-
-    #[inline(always)]
-    fn len(&self) -> usize {
-        0
-    }
-
-    #[inline(always)]
-    fn remain(&self) -> usize {
-        N
-    }
-
-    #[cold]
-    fn reserve(&mut self, _additional: usize) {
-        unreachable!("cannot reserve additional capacity for an array");
-    }
-
-    #[inline(always)]
-    fn truncate(&mut self, len: usize) {
-        self[len..].fill(T::default());
-    }
-
-    #[inline(always)]
-    fn push(&mut self, item: Self::Item, i: usize) {
-        self[i] = item;
-    }
 }
 
 #[cfg(feature = "heapless")]
-impl<const N: usize, T: Copy> Sink for heapless::Vec<T, N> {
+impl<const N: usize, T: NoUninit> Sink for heapless::Vec<T, N> {
     type Item = T;
 
     #[inline(always)]
@@ -129,22 +91,20 @@ impl<const N: usize, T: Copy> Sink for heapless::Vec<T, N> {
     }
 
     #[inline(always)]
-    fn truncate(&mut self, len: usize) {
-        // SAFETY: T: Copy, so we can safely set the length to a smaller value without dropping any elements.
+    fn as_mut_ptr(&mut self) -> *mut Self::Item {
+        self.as_mut_ptr()
+    }
+
+    #[inline(always)]
+    unsafe fn set_len(&mut self, len: usize) {
         unsafe {
             self.set_len(len);
         }
     }
-
-    #[inline(always)]
-    fn push(&mut self, item: Self::Item, _i: usize) {
-        // SAFETY: The caller must ensure that the buffer has enough remaining capacity to push the item.
-        let _ = self.push(item);
-    }
 }
 
 #[cfg(feature = "arrayvec")]
-impl<T: Copy, const N: usize> Sink for arrayvec::ArrayVec<T, N> {
+impl<T: NoUninit, const N: usize> Sink for arrayvec::ArrayVec<T, N> {
     type Item = T;
 
     #[inline(always)]
@@ -163,15 +123,14 @@ impl<T: Copy, const N: usize> Sink for arrayvec::ArrayVec<T, N> {
     }
 
     #[inline(always)]
-    fn truncate(&mut self, len: usize) {
-        // SAFETY: T: Copy, so we can safely set the length to a smaller value without dropping any elements.
-        unsafe {
-            self.set_len(len);
-        }
+    fn as_mut_ptr(&mut self) -> *mut Self::Item {
+        self.as_mut_ptr()
     }
 
     #[inline(always)]
-    fn push(&mut self, item: Self::Item, _i: usize) {
-        self.push(item);
+    unsafe fn set_len(&mut self, len: usize) {
+        unsafe {
+            self.set_len(len);
+        }
     }
 }

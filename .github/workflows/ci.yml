@@ -17,22 +17,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        test_type: [standard, loom]
+        include:
+          - os: ubuntu-latest
+            test_type: standard
+          - os: macos-latest
+            test_type: standard
+          - os: windows-latest
+            test_type: standard
+          - os: ubuntu-latest
+            test_type: loom
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
+
       - uses: swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}-${{ matrix.test_type }}
 
       - name: Run Standard Tests
         if: matrix.test_type == 'standard'
-        run: cargo test --features alloc,arrayvec,heapless --verbose
+        run: cargo test --features alloc,arrayvec,heapless --verbose --locked
 
       - name: Run Loom Tests
         if: matrix.test_type == 'loom'
-        run: cargo test --features loom --verbose
-        env:
-          RUSTFLAGS: "--cfg loom"
+        run: cargo test --features loom --verbose --locked
+
+  miri:
+    name: Miri
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          key: miri
+
+      - name: Run Miri
+        run: cargo miri test --features alloc,arrayvec,heapless --verbose --locked
