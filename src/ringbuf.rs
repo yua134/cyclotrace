@@ -92,17 +92,24 @@ impl<T: NoUninit, const N: usize> BufWriter<T, N> {
     }
 
     #[inline]
+    #[must_use]
     /// Gets the values in the specified range. The range is specified by the n-th position from the latest value, and the range must be less than N.
     ///
-    /// Returns None if the range is invalid.
+    /// Returns false if the range is invalid.
     ///
     /// This function is always wait-free, even when the atomic operations aren't wait-free, so it will never block the thread.
-    pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> Option<()>
+    pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
     {
         self.buf.read_range_by_writer(self.tail, range, buf)
+    }
+
+    #[inline]
+    /// Returns true if the buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.buf.is_empty()
     }
 }
 // SAFETY: BufWriter is not thread-safe, but it can be sent to another thread.
@@ -231,7 +238,7 @@ impl<T: NoUninit, const N: usize> BufReader<T, N> {
     /// let _ = reader.try_read_range(.., &mut buf);
     /// assert_eq!(buf, vec![1, 2, 3]);
     /// ```
-    pub fn try_read_range<S, R>(&self, range: R, buf: &mut S) -> Option<()>
+    pub fn try_read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
@@ -244,20 +251,21 @@ impl<T: NoUninit, const N: usize> BufReader<T, N> {
         note = "This function will be removed in the next version. Use `try_read_range` instead."
     )]
     #[inline]
+    #[must_use]
     /// This function is deprecated. Use [`Self::try_read_range`](Self::try_read_range) instead.
     pub fn get_range<S, R>(&self, range: R, buf: &mut S) -> Option<()>
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
     {
-        self.buf.try_read_range(range, buf)
+        self.buf.try_read_range(range, buf).then_some(())
     }
 
     #[inline]
     #[must_use]
     /// Gets the values in the specified range. The range is specified by the n-th position from the latest value, and the range must be less than N - 1.
     ///
-    /// Returns None if the range is invalid.
+    /// Returns false if the range is invalid.
     ///
     /// This function is lock-free, so it will never block the thread, but it may loop if the value is overwritten while reading.
     ///
@@ -267,7 +275,7 @@ impl<T: NoUninit, const N: usize> BufReader<T, N> {
     ///
     /// # Panics
     /// This function panics if the Sink implementation panics, for example, if the buffer is a slice or array and the range is out of bounds. See implementations of [Sink](crate::Sink) for more details.
-    pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> Option<()>
+    pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,

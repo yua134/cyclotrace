@@ -2,7 +2,7 @@
 
 ## v0.3.0 release
 
-**date: 2026-9-26**
+**date: 2026-9-30**
 
 [diff](https://github.com/yua134/cyclotrace/compare/v0.2.0...v0.3.0)
 
@@ -13,6 +13,7 @@
 - It is less sufficient to use `static_buffer!` macro to create a ring buffer, so it is removed, you should use `StaticBuffer` struct directly to create a ring buffer instead.
 - `create_buffer` and `StaticBuffer::new` require `size_of::<T>()` * N is a multiple of `cyclotrace::ATOMIC_SIZE`.
 - `BufWriter::write` and `Writer::write` now require `&mut self` instead of `&self`.
+- `BufReader::read_range` and `StaticBuffer::read_range` now return `bool` instead of `Option<()>`
 
 ### Deprecated
 - `get`, `get_latest`, and `get_range` methods of the `BufReader` and `Reader` structs are deprecated, and will be removed in the next release. Use `read`, `read_latest`, and `read_range` methods instead, these methods are the same as the deprecated methods.

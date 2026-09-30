@@ -129,12 +129,12 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         }
     }
 
-    /// Returns None if the buffer is empty, now overwritten or if the range is invalid.
+    /// Returns false if the buffer is empty, now overwritten or if the range is invalid.
     ///
     /// # Panics
     /// This function panics if the Sink implementation panics, for example, if the buffer is a slice or array and the range is out of bounds.
     #[inline(always)]
-    pub(crate) fn try_read_range<S, R>(&self, range: R, buf: &mut S) -> Option<()>
+    pub(crate) fn try_read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
@@ -157,7 +157,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         // end > N: index end is out of bounds
         // end == N: index end is writing locked
         if start >= end || end >= N {
-            return None;
+            return false;
         }
 
         let diff = end - start;
@@ -173,7 +173,9 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
 
         // buffer is uninitialized
         // tail < end: the slots are uninitialized or writing locked
-        let read_old = tail.checked_sub(end as u64)?;
+        let Some(read_old) = tail.checked_sub(end as u64) else {
+            return false;
+        };
         let slot_old = read_old as usize & (N - 1);
 
         // SAFETY:
@@ -190,10 +192,10 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
             unsafe {
                 buf.set_len(len + diff);
             }
-            Some(())
+            true
         } else {
             // value is overwritten while reading
-            None
+            false
         }
     }
 
@@ -252,12 +254,12 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
     }
 
     #[inline(always)]
-    /// Returns None if the range is invalid.
+    /// Returns false if the range is invalid.
     /// This function may loop if the value is overwritten while reading, but it will never block the thread.
     ///
     /// # Panics
     /// This function panics if the Sink implementation panics, for example, if the buffer is a slice or array and the range is out of bounds.
-    pub(crate) fn read_range<R, S>(&self, range: R, buf: &mut S) -> Option<()>
+    pub(crate) fn read_range<R, S>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
@@ -280,7 +282,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         // end >= N: index end is out of bounds
         // end == N - 1: index end is writing locked
         if start >= end || end >= N {
-            return None;
+            return false;
         }
 
         let diff = end - start;
@@ -329,7 +331,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
                 unsafe {
                     buf.set_len(len + diff);
                 }
-                return Some(());
+                return true;
             } else {
                 // value is overwritten while reading, so we need to read the next value.
 
@@ -358,13 +360,14 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         // - buf and self.data is not overlap.
         unsafe { PerByteLoad::new(&self.data, slot, 1, &mut buf) }.load();
 
+        // Writer calls this function, so the value is not overwritten while reading.
         let value = unsafe { buf.assume_init() };
         Some(value)
     }
 
     #[inline(always)]
     /// This function must be called only the writer thread.
-    pub(crate) fn read_range_by_writer<R, S>(&self, tail: u64, range: R, buf: &mut S) -> Option<()>
+    pub(crate) fn read_range_by_writer<R, S>(&self, tail: u64, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
@@ -384,7 +387,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         // start >= end: range is empty or invalid
         // end > N: index end is out of bounds
         if start >= end || end > N {
-            return None;
+            return false;
         }
 
         let diff = end - start;
@@ -398,7 +401,9 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
             buf.reserve(lack + 1);
         }
 
-        let read_old = tail.checked_sub(end as u64)?;
+        let Some(read_old) = tail.checked_sub(end as u64) else {
+            return false;
+        };
         let slot_old = read_old as usize & (N - 1);
 
         // SAFETY:
@@ -414,7 +419,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
             buf.set_len(len + diff);
         }
 
-        Some(())
+        true
     }
 
     #[inline(always)]

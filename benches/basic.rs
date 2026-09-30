@@ -663,11 +663,6 @@ fn bench_ringcast(c: &mut Criterion) {
     bench_ringcast_read::<Huge, 8>(c, "ringcast_read_huge_8readers");
 }
 
-criterion_group!(
-    benches,
-    bench_cyclotrace,
-    bench_spmc_buffer,
-    bench_ringcast,
-);
+criterion_group!(benches, bench_cyclotrace, bench_spmc_buffer, bench_ringcast,);
 
 criterion_main!(benches);

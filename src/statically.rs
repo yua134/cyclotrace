@@ -131,7 +131,7 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
     #[must_use]
     /// Gets the values in the specified range. The range is specified by the n-th position from the latest value, and the range must be less than N - 1.
     ///
-    /// Returns None if the buffer is empty, now overwritten or if the range is invalid.
+    /// Returns false if the buffer is empty, now overwritten or if the range is invalid.
     ///
     /// This function is wait-free, so it will never block the thread.
     ///
@@ -141,7 +141,7 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
     ///
     /// # Panics
     /// This function panics if the Sink implementation panics, for example, if the buffer is a slice or array and the range is out of bounds. See implementations of [Sink](crate::Sink) for more details.
-    pub fn try_read_range<R, S>(&self, range: R, buf: &mut S) -> Option<()>
+    pub fn try_read_range<R, S>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
@@ -154,13 +154,14 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
         note = "This function will be removed in the next version. Use `try_read_range` instead."
     )]
     #[inline]
+    #[must_use]
     /// This function is deprecated. Use [`Self::try_read_range`](Self::try_read_range) instead.
     pub fn get_range<R, S>(&self, range: R, buf: &mut S) -> Option<()>
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
     {
-        self.buf.try_read_range(range, buf)
+        self.buf.try_read_range(range, buf).then_some(())
     }
 
     #[inline]
@@ -188,7 +189,7 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
     #[inline]
     /// Gets the values in the specified range. The range is specified by the n-th position from the latest value, and the range must be less than N - 1.
     ///
-    /// Returns None if the range is invalid.
+    /// Returns false if the range is invalid.
     ///
     /// This function is lock-free, so it will never block the thread, but it may loop if the value is overwritten while reading.
     ///
@@ -198,7 +199,7 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
     ///
     /// # Panics
     /// This function panics if the Sink implementation panics, for example, if the buffer is a slice or array and the range is out of bounds. See implementations of [Sink](crate::Sink) for more details.
-    pub fn read_range<R, S>(&self, range: R, buf: &mut S) -> Option<()>
+    pub fn read_range<R, S>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
@@ -228,22 +229,41 @@ impl<'a, T: NoUninit + 'a, const N: usize> Writer<'a, T, N> {
     }
 
     #[inline]
+    /// Gets the value at the n-th position from the latest value. n must be less than N.
+    ///
+    /// Returns None if the buffer is empty or if n is out of bounds.
+    ///
+    /// This function is wait-free, so it will never block the thread.
     pub fn read(&self, n: usize) -> Option<T> {
         self.buf.buf.read_by_writer(n, self.tail)
     }
 
     #[inline]
+    /// Gets the latest value. Returns None if the buffer is empty.
+    /// This is a convenience method for [`Self::read(0)`](Self::read).
     pub fn read_latest(&self) -> Option<T> {
         self.read(0)
     }
 
     #[inline]
-    pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> Option<()>
+    #[must_use]
+    /// Gets the values in the specified range. The range is specified by the n-th position from the latest value, and the range must be less than N.
+    ///
+    /// Returns false if the buffer is empty or if the range is invalid.
+    ///
+    /// This function is wait-free, so it will never block the thread.
+    pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
     {
         self.buf.buf.read_range_by_writer(self.tail, range, buf)
+    }
+
+    #[inline]
+    /// Returns true if the buffer is empty.
+    pub fn is_empty(&self) -> bool {
+        self.buf.buf.is_empty()
     }
 }
 impl<'a, T: 'a, const N: usize> Drop for Writer<'a, T, N> {

@@ -114,7 +114,7 @@ mod loom {
 
             let t2 = loom::thread::spawn(move || {
                 let mut buf = Vec::new();
-                if reader.try_read_range(.., &mut buf).is_some() {
+                if reader.try_read_range(.., &mut buf) {
                     assert!(buf.iter().all(|&x| x <= 3 && x >= 1));
                 }
             });
@@ -161,7 +161,7 @@ mod loom {
 
             let t2 = loom::thread::spawn(move || {
                 let mut buf = Vec::new();
-                reader.read_range(.., &mut buf).unwrap();
+                let _ = reader.read_range(.., &mut buf);
                 assert!(buf.iter().all(|&x| x <= 3 && x >= 1));
             });
 
@@ -399,14 +399,14 @@ mod tests {
         writer.write(2);
         writer.write(3);
         let mut buf = Vec::new();
-        reader.read_range(.., &mut buf).unwrap();
+        let _ = reader.read_range(.., &mut buf);
         assert_eq!(buf, vec![1, 2, 3]);
 
         let mut buf = Vec::new();
-        reader.read_range(1.., &mut buf).unwrap();
+        let _ = reader.read_range(1.., &mut buf);
         assert_eq!(buf, vec![1, 2]);
         let mut buf = Vec::new();
-        reader.read_range(..2, &mut buf).unwrap();
+        let _ = reader.read_range(..2, &mut buf);
         assert_eq!(buf, vec![2, 3]);
     }
 
@@ -419,7 +419,7 @@ mod tests {
         writer.write(4);
         writer.write(5);
         let mut buf = Vec::new();
-        reader.read_range(.., &mut buf).unwrap();
+        let _ = reader.read_range(.., &mut buf);
         assert_eq!(buf, vec![3, 4, 5]);
     }
 
@@ -447,7 +447,7 @@ mod tests {
         assert_eq!(val2, test2);
         assert_eq!(val1, test1);
         let mut buf = vec![];
-        reader.read_range(0..3, &mut buf).unwrap();
+        let _ = reader.read_range(0..3, &mut buf);
         assert_eq!(buf, vec![test1, test2, test3]);
     }
 
