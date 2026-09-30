@@ -71,7 +71,7 @@ impl<T: NoUninit, const N: usize> BufWriter<T, N> {
     ///
     /// Returns None if the buffer is empty, or if n is out of bounds.
     ///
-    /// This function is always wait-free, even when the atomic operations aren't wait-free, so it will never block the thread.
+    /// This function is wait-free, when the atomic operations are wait-free, so it will never block the thread.
     ///
     /// # Example
     /// ```rust,no_run
@@ -97,7 +97,7 @@ impl<T: NoUninit, const N: usize> BufWriter<T, N> {
     ///
     /// Returns false if the range is invalid.
     ///
-    /// This function is always wait-free, even when the atomic operations aren't wait-free, so it will never block the thread.
+    /// This function is wait-free, even when the atomic operations are wait-free, so it will never block the thread.
     pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
