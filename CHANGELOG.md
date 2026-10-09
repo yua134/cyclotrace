@@ -1,5 +1,23 @@
 # Changelog for `cyclotrace`
 
+## v0.3.1 release
+
+**date: 2026-10-10**
+
+[diff](https://github.com/yua134/cyclotrace/compare/v0.3.0...v0.3.1)
+
+### Fixes
+
+- Fixed unexpected reordering issue in the implementation that was present in v0.3.0.
+
+## v0.3.0 yanked
+
+### Reason
+
+**date: 2026-10-10**
+
+The v0.3.0 release was yanked due to a critical bug in the implementation that probably caused unexpected reordering.
+
 ## v0.3.0 release
 
 **date: 2026-9-30**

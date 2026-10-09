@@ -27,7 +27,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cyclotrace = "0.3.0"
+cyclotrace = "0.3.1"
 ```
 
 ```rust,no_run

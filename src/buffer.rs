@@ -1,7 +1,7 @@
 use core::{mem::MaybeUninit, ops::RangeBounds};
 
 use crate::{
-    ATOMIC_SIZE, AtomicU64, Ordering,
+    ATOMIC_SIZE, AtomicU64, Ordering, fence,
     per_byte_atomic::{PerByteLoad, PerByteStore},
     sink::Sink,
     spin_loop,
@@ -77,6 +77,11 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
     #[inline(always)]
     /// This function must be called only one thread.
     pub(crate) unsafe fn write(&self, value: T, tail: u64) -> u64 {
+        // This fence is not aim to form happens-before relationship with any loads, but to order the previous stores and the following store.
+        // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
+        // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
+        fence(Ordering::AcqRel);
+
         // N is a power of 2, so we can use bitwise AND instead of modulo to get the index.
         // tail as usize % N is equivalent to tail & (N - 1) as u64, but the latter is much faster.
         // SAFETY:
@@ -117,6 +122,11 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         // - index is less than the elements in the buffer.
         // - buf and self.data is not overlap.
         unsafe { PerByteLoad::new(&self.data, slot, 1, &mut buf) }.load();
+
+        // This fence is not aim to form happens-before relationship with any stores, but to order the following loads(counter second loads).
+        // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
+        // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
+        fence(Ordering::AcqRel);
 
         // If the value is overwritten while reading, the reader can be teared, so we must check if the value is overwritten after reading.
         if self.tail.load(Ordering::Relaxed) < read + N as u64 {
@@ -186,6 +196,11 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         // - buf and self.data is not overlap.
         unsafe { PerByteLoad::new(&self.data, slot_old, diff, buf) }.load();
 
+        // This fence is not aim to form happens-before relationship with any stores, but to order the following loads(counter second loads).
+        // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
+        // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
+        fence(Ordering::AcqRel);
+
         // If the value is overwritten while reading, the reader can be teared, so we must check if the value is overwritten after reading.
         if self.tail.load(Ordering::Relaxed) < read_old + N as u64 {
             // value is not overwritten
@@ -238,6 +253,11 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
             unsafe { PerByteLoad::new(&self.data, slot, 1, &mut buf) }.load();
 
             tail = self.tail.load(Ordering::Acquire);
+
+            // This fence is not aim to form happens-before relationship with any stores, but to order the following loads(counter second loads).
+            // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
+            // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
+            fence(Ordering::AcqRel);
 
             // If the value is overwritten while reading, the reader can be teared, so we must check if the value is overwritten after reading.
             if tail < read + N as u64 {
@@ -324,6 +344,11 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
             unsafe { PerByteLoad::new(&self.data, slot_old, diff, buf) }.load();
 
             tail = self.tail.load(Ordering::Acquire);
+
+            // This fence is not aim to form happens-before relationship with any stores, but to order the following loads(counter second loads).
+            // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
+            // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
+            fence(Ordering::AcqRel);
 
             // If the value is overwritten while reading, the reader can be teared, so we must check if the value is overwritten after reading.
             if tail < read_old + N as u64 {

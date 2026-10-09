@@ -6,13 +6,13 @@ extern crate alloc;
 
 cfg_if::cfg_if!(
     if #[cfg(feature = "loom")] {
-        pub(crate) use loom::sync::{Arc, atomic::{AtomicBool, AtomicU64, Ordering}};
+        pub(crate) use loom::sync::{Arc, atomic::{AtomicBool, AtomicU64, Ordering, fence}};
         pub(crate) use loom::hint::spin_loop;
 
         pub(crate) type AtomicBase = loom::sync::atomic::AtomicUsize;
         pub(crate) type Base = usize;
     } else if #[cfg(feature = "portable-atomic")] {
-        pub(crate) use portable_atomic::{AtomicBool, AtomicU64, Ordering};
+        pub(crate) use portable_atomic::{AtomicBool, AtomicU64, Ordering, fence};
         pub(crate) use portable_atomic::hint::spin_loop;
 
         const U128_LOCK_FREE: bool = portable_atomic::AtomicU128::is_always_lock_free();
@@ -58,7 +58,7 @@ cfg_if::cfg_if!(
         #[cfg(feature = "alloc")]
         pub(crate) use alloc::sync::Arc;
     } else {
-        pub(crate) use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+        pub(crate) use core::sync::atomic::{AtomicBool, AtomicU64, Ordering, fence};
         pub(crate) use core::hint::spin_loop;
 
         cfg_if::cfg_if!(
