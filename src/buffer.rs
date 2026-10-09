@@ -123,7 +123,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         // - buf and self.data is not overlap.
         unsafe { PerByteLoad::new(&self.data, slot, 1, &mut buf) }.load();
 
-        // This fence is not aim to form happens-before relationship with any stores, but to order the following loads(counter second loads).
+        // This fence is not aim to form happens-before relationship with any stores, but to order the previous loads and the following load(counter second loads).
         // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
         // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
         fence(Ordering::AcqRel);
@@ -196,7 +196,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
         // - buf and self.data is not overlap.
         unsafe { PerByteLoad::new(&self.data, slot_old, diff, buf) }.load();
 
-        // This fence is not aim to form happens-before relationship with any stores, but to order the following loads(counter second loads).
+        // This fence is not aim to form happens-before relationship with any stores, but to order the previous loads and the following load(counter second loads).
         // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
         // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
         fence(Ordering::AcqRel);
@@ -254,7 +254,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
 
             tail = self.tail.load(Ordering::Acquire);
 
-            // This fence is not aim to form happens-before relationship with any stores, but to order the following loads(counter second loads).
+            // This fence is not aim to form happens-before relationship with any stores, but to order the previous loads and the following load(counter second loads).
             // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
             // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
             fence(Ordering::AcqRel);
@@ -345,7 +345,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
 
             tail = self.tail.load(Ordering::Acquire);
 
-            // This fence is not aim to form happens-before relationship with any stores, but to order the following loads(counter second loads).
+            // This fence is not aim to form happens-before relationship with any stores, but to order the previous loads and the following load(counter second loads).
             // The ordering base on the C++ standard because the Rust standard library's atomic operations are based on the C++20 atomics.
             // See details: https://en.cppreference.com/cpp/atomic/memory_order#Constants
             fence(Ordering::AcqRel);
