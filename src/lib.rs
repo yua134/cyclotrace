@@ -6,7 +6,7 @@ extern crate alloc;
 
 cfg_if::cfg_if!(
     if #[cfg(feature = "loom")] {
-        pub(crate) use loom::sync::{Arc, atomic::{AtomicBool, AtomicU64, Ordering, fence}};
+        pub(crate) use loom::sync::{Arc, atomic::{AtomicBool, AtomicUsize, AtomicU64, Ordering, fence}};
         pub(crate) use loom::hint::spin_loop;
 
         pub(crate) type AtomicBase = loom::sync::atomic::AtomicUsize;
@@ -14,6 +14,9 @@ cfg_if::cfg_if!(
     } else if #[cfg(feature = "portable-atomic")] {
         pub(crate) use portable_atomic::{AtomicBool, AtomicU64, Ordering, fence};
         pub(crate) use portable_atomic::hint::spin_loop;
+
+        #[cfg(rustc_1_100)]
+        pub(crate) use portable_atomic::AtomicUsize;
 
         const U128_LOCK_FREE: bool = portable_atomic::AtomicU128::is_always_lock_free();
         const U64_LOCK_FREE: bool = portable_atomic::AtomicU64::is_always_lock_free();
@@ -54,12 +57,12 @@ cfg_if::cfg_if!(
                 >,
             >,
         >;
-
-        #[cfg(feature = "alloc")]
-        pub(crate) use alloc::sync::Arc;
     } else {
         pub(crate) use core::sync::atomic::{AtomicBool, AtomicU64, Ordering, fence};
         pub(crate) use core::hint::spin_loop;
+
+        #[cfg(rustc_1_100)]
+        pub(crate) use core::sync::atomic::AtomicUsize;
 
         cfg_if::cfg_if!(
             if #[cfg(target_has_atomic = "64")] {
@@ -78,9 +81,25 @@ cfg_if::cfg_if!(
                 compile_error!("This target does not support atomic operations.");
             }
         );
+    }
+);
+
+cfg_if::cfg_if!(
+    if #[cfg(rustc_1_100)] {
+        mod ringbuf;
+        mod arc;
+
+        pub(crate) use arc::Arc;
 
         #[cfg(feature = "alloc")]
+        pub use ringbuf::create_buffer;
+        pub use ringbuf::{BufReader, BufWriter, create_buffer_in};
+    } else if #[cfg(feature = "alloc")] {
+        mod ringbuf;
+
         pub(crate) use alloc::sync::Arc;
+
+        pub use ringbuf::{create_buffer, BufReader, BufWriter};
     }
 );
 
@@ -89,17 +108,11 @@ cfg_if::cfg_if!(
 pub const ATOMIC_SIZE: usize = core::mem::size_of::<AtomicBase>();
 pub(crate) const ATOMIC_ALIGN: usize = core::mem::align_of::<AtomicBase>();
 
-#[cfg(feature = "alloc")]
-mod ringbuf;
-
 mod buffer;
 mod per_byte_atomic;
 mod sink;
 mod statically;
 mod util;
-
-#[cfg(feature = "alloc")]
-pub use ringbuf::{BufReader, BufWriter, create_buffer};
 
 pub use {
     sink::Sink,

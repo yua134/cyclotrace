@@ -31,6 +31,9 @@ loom = { version = "0.7.2" , optional = true }
 heapless = { version = "0.9", optional = true }
 arrayvec = { version = "0.7", default-features = false, optional = true }
 
+[build-dependencies]
+rustc_version = "0.4"
+
 [dev-dependencies]
 criterion = "0.8.2"
 spmc_buffer = "0.5.2"

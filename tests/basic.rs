@@ -283,6 +283,13 @@ mod tests {
     use super::*;
 
     #[test]
+    fn cmp_chck() {
+        let (mut w, r) = create_buffer_in::<u32, 4, std::alloc::Global>(std::alloc::Global);
+        w.write(42);
+        assert_eq!(r.read(0), Some(42));
+    }
+
+    #[test]
     fn multiple_try_read() {
         let (mut writer, reader) = create_buffer::<u32, 4>();
         writer.write(42);
