@@ -36,6 +36,9 @@ jobs:
         with:
           key: ${{ matrix.os }}-${{ matrix.test_type }}
 
+      - name: Build
+        run: cargo build --no-default-features
+
       - name: Run Standard Tests
         if: matrix.test_type == 'standard'
         run: cargo test --features alloc,arrayvec,heapless --verbose --locked

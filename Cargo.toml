@@ -45,3 +45,6 @@ harness = false
 release.opt-level = 3
 release.panic = "abort"
 release.strip = true
+
+[package.metadata.docs.rs]
+features = ["arrayvec", "heapless"]

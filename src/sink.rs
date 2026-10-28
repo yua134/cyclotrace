@@ -11,7 +11,7 @@ pub trait Sink {
     /// Returns the remaining capacity of the buffer. For a `Vec<T>`, this is `capacity() - len()`.
     fn remain(&self) -> usize;
 
-    /// Reserves additional capacity for the buffer.
+    /// Reserves additional capacity for the buffer. This can panic for fixed-size buffers.
     fn reserve(&mut self, additional: usize);
 
     /// Returns a raw pointer to the beginning of the buffer.
@@ -87,7 +87,7 @@ impl<const N: usize, T: NoUninit> Sink for heapless::Vec<T, N> {
 
     #[cold]
     fn reserve(&mut self, _additional: usize) {
-        unreachable!("heapless::Vec does not support reserving additional capacity");
+        panic!("heapless::Vec does not support reserving additional capacity");
     }
 
     #[inline(always)]
@@ -119,7 +119,7 @@ impl<T: NoUninit, const N: usize> Sink for arrayvec::ArrayVec<T, N> {
 
     #[cold]
     fn reserve(&mut self, _additional: usize) {
-        unreachable!("arrayvec::ArrayVec does not support reserving additional capacity");
+        panic!("arrayvec::ArrayVec does not support reserving additional capacity");
     }
 
     #[inline(always)]
