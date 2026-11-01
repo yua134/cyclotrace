@@ -36,9 +36,6 @@ jobs:
         with:
           key: ${{ matrix.os }}-${{ matrix.test_type }}
 
-      - name: Build
-        run: cargo build --no-default-features
-
       - name: Run Standard Tests
         if: matrix.test_type == 'standard'
         run: cargo test --features alloc,arrayvec,heapless --verbose --locked
@@ -46,6 +43,28 @@ jobs:
       - name: Run Loom Tests
         if: matrix.test_type == 'loom'
         run: cargo test --features loom --verbose --locked
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          key: static-analysis
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run Rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: Build
+        run: cargo build --no-default-features
 
   miri:
     name: Miri
