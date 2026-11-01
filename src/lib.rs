@@ -93,6 +93,7 @@ pub(crate) const ATOMIC_ALIGN: usize = core::mem::align_of::<AtomicBase>();
 mod ringbuf;
 
 mod buffer;
+mod cursor;
 mod per_byte_atomic;
 mod sink;
 mod statically;
@@ -104,4 +105,5 @@ pub use ringbuf::{BufReader, BufWriter, create_buffer};
 pub use {
     sink::Sink,
     statically::{StaticBuffer, Writer},
+    cursor::Cursor
 };

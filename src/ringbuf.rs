@@ -124,7 +124,7 @@ unsafe impl<T: NoUninit + Send, const N: usize> Send for BufWriter<T, N> {}
 ///
 /// [`BufReader::clone`] creates a new reader that shares the same buffer, and clone is cheap.
 pub struct BufReader<T, const N: usize> {
-    buf: Arc<Buffer<T, N>>,
+    pub(crate) buf: Arc<Buffer<T, N>>,
 }
 impl<T: NoUninit, const N: usize> BufReader<T, N> {
     #[inline]

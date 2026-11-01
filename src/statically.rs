@@ -204,6 +204,11 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
     {
         self.buf.read_range(range, buf)
     }
+
+    #[inline(always)]
+    pub(crate) fn buf(&self) -> &Buffer<T, N> {
+        &self.buf
+    }
 }
 
 /// A writer for the buffer. This struct is not thread-safe, so it must be used by only one thread.
