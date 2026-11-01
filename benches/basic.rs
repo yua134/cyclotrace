@@ -24,6 +24,7 @@ impl Default for Huge {
 
 unsafe impl NoUninit for Huge {}
 
+#[cfg(target_os = "windows")]
 fn pin_cpu(cpu: usize) {
     let mask = 1 << cpu;
 
@@ -49,6 +50,11 @@ fn pin_cpu(cpu: usize) {
 
         assert_ne!(ok, 0);
     }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn pin_cpu(_cpu: usize) {
+    // Not implemented for non-Windows platforms but benching will still work, just without CPU pinning.
 }
 
 const WRITER_CPU: usize = 10;
