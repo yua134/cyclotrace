@@ -97,6 +97,7 @@ mod per_byte_atomic;
 mod sink;
 mod statically;
 mod util;
+mod wait;
 
 #[cfg(feature = "alloc")]
 pub use ringbuf::{BufReader, BufWriter, create_buffer};
@@ -104,4 +105,5 @@ pub use ringbuf::{BufReader, BufWriter, create_buffer};
 pub use {
     sink::Sink,
     statically::{StaticBuffer, Writer},
+    wait::Wait,
 };

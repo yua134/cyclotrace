@@ -2,7 +2,7 @@ use core::{ops::RangeBounds, sync::atomic::Ordering};
 
 use bytemuck::NoUninit;
 
-use crate::{AtomicBool, buffer::Buffer, sink::Sink};
+use crate::{AtomicBool, Wait, buffer::Buffer, sink::Sink, wait::SpinWaiter};
 
 /// A static buffer that can be used in a static context.
 pub struct StaticBuffer<T, const N: usize> {
@@ -171,7 +171,15 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
     ///
     /// This function is lock-free, but it may loop if the value is overwritten while reading or if the buffer is empty.
     pub fn read(&self, n: usize) -> Option<T> {
-        self.buf.read(n)
+        self.buf.read::<SpinWaiter>(n)
+    }
+
+    #[inline]
+    /// See [`Self::read`](Self::read) for details.
+    ///
+    /// This function allows you to specify a custom waiter that implements the [`Wait`](crate::Wait) trait, which can be used to customize the waiting behavior when the buffer is empty.
+    pub fn read_with_waiter<W: Wait>(&self, n: usize) -> Option<T> {
+        self.buf.read::<W>(n)
     }
 
     #[inline]
@@ -202,7 +210,21 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
     {
-        self.buf.read_range(range, buf)
+        self.buf.read_range::<R, S, SpinWaiter>(range, buf)
+    }
+
+    #[inline]
+    #[must_use]
+    /// See [`Self::read_range`](Self::read_range) for details.
+    ///
+    /// This function allows you to specify a custom waiter that implements the [`Wait`](crate::Wait) trait, which can be used to customize the waiting behavior when the buffer is empty.
+    pub fn read_range_with_waiter<R, S, W>(&self, range: R, buf: &mut S) -> bool
+    where
+        S: Sink<Item = T> + ?Sized,
+        R: RangeBounds<usize>,
+        W: Wait,
+    {
+        self.buf.read_range::<R, S, W>(range, buf)
     }
 }
 
@@ -232,7 +254,7 @@ impl<'a, T: NoUninit + 'a, const N: usize> Writer<'a, T, N> {
     /// Returns None if the buffer is empty or if n is out of bounds.
     ///
     /// This function is wait-free, so it will never block the thread.
-    /// 
+    ///
     /// This function's limitations are more relaxed than [`StaticBuffer::read`](StaticBuffer::read)'s are, because it doesn't need to worry about the value being overwritten while reading. It enables that the range is more wide and the read is more fast.
     pub fn read(&self, n: usize) -> Option<T> {
         self.buf.buf.read_by_writer(n, self.tail)
@@ -252,9 +274,9 @@ impl<'a, T: NoUninit + 'a, const N: usize> Writer<'a, T, N> {
     /// Returns false if the buffer is empty or if the range is invalid.
     ///
     /// This function is wait-free, so it will never block the thread.
-    /// 
+    ///
     /// This function's limitations are more relaxed than [`BufReader::read`](BufReader::read)'s are, because it doesn't need to worry about the value being overwritten while reading. It enables that the range is more wide and the read is more fast.
-    /// 
+    ///
     pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,

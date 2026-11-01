@@ -4,7 +4,7 @@ use crate::{
     ATOMIC_SIZE, AtomicU64, Ordering, fence,
     per_byte_atomic::{PerByteLoad, PerByteStore},
     sink::Sink,
-    spin_loop,
+    wait::Wait,
 };
 
 use bytemuck::NoUninit;
@@ -217,7 +217,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
     #[inline(always)]
     /// Returns None if n is out of bounds.
     /// This function may loop if the value is overwritten while reading, but it will never block the thread.
-    pub(crate) fn read(&self, n: usize) -> Option<T> {
+    pub(crate) fn read<W: Wait>(&self, n: usize) -> Option<T> {
         // n >= N: n mustn't wrap around
         // n == N - 1: index n is writing locked
         if n >= N - 1 {
@@ -228,6 +228,8 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
 
         let mut tail = self.tail.load(Ordering::Acquire);
 
+        let mut waiter = W::new();
+
         let mut read = loop {
             // tail <= n: the slot is uninitialized or writing locked
             if let Some(r) = tail.checked_sub(n + 1) {
@@ -236,7 +238,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
                 // buffer is uninitialized, so we need to wait until the writer writes the first value.
                 tail = self.tail.load(Ordering::Acquire);
 
-                spin_loop();
+                waiter.wait();
             }
         };
 
@@ -279,10 +281,11 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
     ///
     /// # Panics
     /// This function panics if the Sink implementation panics, for example, if the buffer is a slice or array and the range is out of bounds.
-    pub(crate) fn read_range<R, S>(&self, range: R, buf: &mut S) -> bool
+    pub(crate) fn read_range<R, S, W>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
+        W: Wait,
     {
         let start = match range.start_bound() {
             core::ops::Bound::Included(&n) => n,
@@ -318,6 +321,8 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
 
         let end = end as u64;
 
+        let mut waiter = W::new();
+
         // buffer is uninitialized
         // tail <= end: the slots are uninitialized
         // tail < end + 1: tail is writing slot index
@@ -328,7 +333,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
                 // buffer is uninitialized, so we need to wait until the writer writes the first value.
                 tail = self.tail.load(Ordering::Acquire);
 
-                spin_loop();
+                waiter.wait();
             }
         };
 

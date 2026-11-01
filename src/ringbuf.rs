@@ -2,7 +2,7 @@ use bytemuck::NoUninit;
 
 use core::ops::RangeBounds;
 
-use crate::{Arc, buffer::Buffer, sink::Sink};
+use crate::{Arc, Wait, buffer::Buffer, sink::Sink, wait::SpinWaiter};
 
 #[inline]
 /// Creates a new buffer and returns a writer and a reader.
@@ -72,7 +72,7 @@ impl<T: NoUninit, const N: usize> BufWriter<T, N> {
     /// Returns None if the buffer is empty, or if n is out of bounds.
     ///
     /// This function is wait-free, when the atomic operations are wait-free, so it will never block the thread.
-    /// 
+    ///
     /// This function's limitations are more relaxed than [`BufReader::read`](BufReader::read)'s are, because it doesn't need to worry about the value being overwritten while reading. It enables that the range is more wide and the read is more fast.
     ///
     /// # Example
@@ -100,7 +100,7 @@ impl<T: NoUninit, const N: usize> BufWriter<T, N> {
     /// Returns false if the range is invalid.
     ///
     /// This function is wait-free, even when the atomic operations are wait-free, so it will never block the thread.
-    /// 
+    ///
     /// This function's limitations are more relaxed than [`BufReader::read`](BufReader::read)'s are, because it doesn't need to worry about the value being overwritten while reading. It enables that the range is more wide and the read is more fast.
     pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
@@ -202,7 +202,15 @@ impl<T: NoUninit, const N: usize> BufReader<T, N> {
     /// h.join().unwrap();
     /// ```
     pub fn read(&self, n: usize) -> Option<T> {
-        self.buf.read(n)
+        self.buf.read::<SpinWaiter>(n)
+    }
+
+    #[inline]
+    /// See [`Self::read`](Self::read) for details.
+    ///
+    /// This function allows you to specify a custom waiter that implements the [`Wait`](crate::Wait) trait, which can be used to customize the waiting behavior when the buffer is empty.
+    pub fn read_with_waiter<W: Wait>(&self, n: usize) -> Option<T> {
+        self.buf.read::<W>(n)
     }
 
     #[inline]
@@ -284,7 +292,21 @@ impl<T: NoUninit, const N: usize> BufReader<T, N> {
         S: Sink<Item = T> + ?Sized,
         R: RangeBounds<usize>,
     {
-        self.buf.read_range(range, buf)
+        self.buf.read_range::<R, S, SpinWaiter>(range, buf)
+    }
+
+    #[inline]
+    #[must_use]
+    /// See [`Self::read_range`](Self::read_range) for details.
+    ///
+    /// This function allows you to specify a custom waiter that implements the [`Wait`](crate::Wait) trait, which can be used to customize the waiting behavior when the buffer is empty.
+    pub fn read_range_with_waiter<S, R, W>(&self, range: R, buf: &mut S) -> bool
+    where
+        S: Sink<Item = T> + ?Sized,
+        R: RangeBounds<usize>,
+        W: Wait,
+    {
+        self.buf.read_range::<R, S, W>(range, buf)
     }
 }
 impl<T: NoUninit, const N: usize> Clone for BufReader<T, N> {
