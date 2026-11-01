@@ -232,7 +232,7 @@ impl<'a, T: NoUninit + 'a, const N: usize> Writer<'a, T, N> {
     /// Returns None if the buffer is empty or if n is out of bounds.
     ///
     /// This function is wait-free, so it will never block the thread.
-    /// 
+    ///
     /// This function's limitations are more relaxed than [`StaticBuffer::read`](StaticBuffer::read)'s are, because it doesn't need to worry about the value being overwritten while reading. It enables that the range is more wide and the read is more fast.
     pub fn read(&self, n: usize) -> Option<T> {
         self.buf.buf.read_by_writer(n, self.tail)
@@ -252,9 +252,9 @@ impl<'a, T: NoUninit + 'a, const N: usize> Writer<'a, T, N> {
     /// Returns false if the buffer is empty or if the range is invalid.
     ///
     /// This function is wait-free, so it will never block the thread.
-    /// 
+    ///
     /// This function's limitations are more relaxed than [`BufReader::read`](BufReader::read)'s are, because it doesn't need to worry about the value being overwritten while reading. It enables that the range is more wide and the read is more fast.
-    /// 
+    ///
     pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
         S: Sink<Item = T> + ?Sized,

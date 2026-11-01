@@ -72,7 +72,7 @@ impl<T: NoUninit, const N: usize> BufWriter<T, N> {
     /// Returns None if the buffer is empty, or if n is out of bounds.
     ///
     /// This function is wait-free, when the atomic operations are wait-free, so it will never block the thread.
-    /// 
+    ///
     /// This function's limitations are more relaxed than [`BufReader::read`](BufReader::read)'s are, because it doesn't need to worry about the value being overwritten while reading. It enables that the range is more wide and the read is more fast.
     ///
     /// # Example
@@ -100,7 +100,7 @@ impl<T: NoUninit, const N: usize> BufWriter<T, N> {
     /// Returns false if the range is invalid.
     ///
     /// This function is wait-free, even when the atomic operations are wait-free, so it will never block the thread.
-    /// 
+    ///
     /// This function's limitations are more relaxed than [`BufReader::read`](BufReader::read)'s are, because it doesn't need to worry about the value being overwritten while reading. It enables that the range is more wide and the read is more fast.
     pub fn read_range<S, R>(&self, range: R, buf: &mut S) -> bool
     where
@@ -271,7 +271,7 @@ impl<T: NoUninit, const N: usize> BufReader<T, N> {
     ///
     /// Returns false if the range is invalid.
     ///
-    /// This function is lock-free, so it will never block the thread, but it may loop if the value is overwritten while reading.
+    /// This function is lock-free, but it may loop if the value is overwritten while reading.
     ///
     /// Provides an atomic snapshot of the specified range. Unlike calling [`Self::read`](Self::read) multiple times, this ensures all returned values are consistent with the same buffer state, preventing temporal inconsistency (tearing) across different slots.
     ///

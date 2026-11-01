@@ -216,7 +216,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
 
     #[inline(always)]
     /// Returns None if n is out of bounds.
-    /// This function may loop if the value is overwritten while reading, but it will never block the thread.
+    /// This function may loop if the value is overwritten while reading.
     pub(crate) fn read(&self, n: usize) -> Option<T> {
         // n >= N: n mustn't wrap around
         // n == N - 1: index n is writing locked
@@ -275,7 +275,7 @@ impl<T: NoUninit, const N: usize> Buffer<T, N> {
 
     #[inline(always)]
     /// Returns false if the range is invalid.
-    /// This function may loop if the value is overwritten while reading, but it will never block the thread.
+    /// This function may loop if the value is overwritten while reading.
     ///
     /// # Panics
     /// This function panics if the Sink implementation panics, for example, if the buffer is a slice or array and the range is out of bounds.
