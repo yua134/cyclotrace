@@ -122,7 +122,7 @@ where
                     let start = std::time::Instant::now();
 
                     for _ in 0..OPS {
-                        black_box(writer.write(T::default()));
+                        writer.write(T::default());
                     }
 
                     start.elapsed()
@@ -184,7 +184,7 @@ where
                     r.fetch_add(1, Ordering::Relaxed);
 
                     while !f.load(Ordering::Relaxed) {
-                        black_box(writer.write(T::default()));
+                        writer.write(T::default());
                     }
                 }));
 
@@ -231,7 +231,7 @@ fn bench_read_write<T: NoUninit + Send + Default>(c: &mut Criterion, name: &'sta
                 let start = std::time::Instant::now();
 
                 for _ in 0..OPS {
-                    black_box(writer.write(T::default()));
+                    writer.write(T::default());
                     black_box(writer.read_latest());
                 }
 
@@ -305,7 +305,7 @@ where
                     let start = std::time::Instant::now();
 
                     for _ in 0..OPS {
-                        black_box(writer.write(T::default()));
+                        writer.write(T::default());
                     }
 
                     start.elapsed()
@@ -352,7 +352,7 @@ where
                         r.fetch_add(1, Ordering::Relaxed);
 
                         while !f.load(Ordering::Relaxed) {
-                            black_box(writer.write(T::default()));
+                            writer.write(T::default());
                         }
                     }
                 }));
@@ -471,7 +471,7 @@ where
                     let start = std::time::Instant::now();
 
                     for _ in 0..OPS {
-                        black_box(writer.send(T::default()));
+                        writer.send(T::default());
                     }
 
                     start.elapsed()
@@ -534,7 +534,7 @@ where
                     r.fetch_add(1, Ordering::Relaxed);
 
                     while !f.load(Ordering::Relaxed) {
-                        black_box(writer.send(T::default()));
+                        writer.send(T::default());
                     }
                 }));
 

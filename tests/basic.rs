@@ -115,7 +115,7 @@ mod loom {
             let t2 = loom::thread::spawn(move || {
                 let mut buf = Vec::new();
                 if reader.try_read_range(.., &mut buf) {
-                    assert!(buf.iter().all(|&x| x <= 3 && x >= 1));
+                    assert!(buf.iter().all(|&x| (1..=3).contains(&x)));
                 }
             });
 
@@ -162,7 +162,7 @@ mod loom {
             let t2 = loom::thread::spawn(move || {
                 let mut buf = Vec::new();
                 let _ = reader.read_range(.., &mut buf);
-                assert!(buf.iter().all(|&x| x <= 3 && x >= 1));
+                assert!(buf.iter().all(|&x| (1..=3).contains(&x)));
             });
 
             t1.join().unwrap();
@@ -240,7 +240,7 @@ mod loom {
             let w = &*buf;
             let t1 = loom::thread::spawn(move || {
                 let mut writer = w.get_writer().unwrap();
-                let _ = writer.write(42);
+                writer.write(42);
             });
 
             let r = &*buf;

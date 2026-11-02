@@ -14,7 +14,7 @@ description = "A high-performance, wait-free ring buffer in Rust. Supports SPMC 
 [features]
 default = ["alloc"]
 alloc = []
-portable-atomic = ["dep:portable-atomic", "condtype"]
+portable-atomic = ["dep:portable-atomic", "dep:condtype"]
 loom = ["dep:loom", "alloc"]
 arrayvec = ["dep:arrayvec"]
 heapless = ["dep:heapless"]
@@ -48,3 +48,6 @@ release.strip = true
 
 [package.metadata.docs.rs]
 features = ["arrayvec", "heapless"]
+
+[lints.cargo]
+unused_dependencies = "allow"
