@@ -34,6 +34,9 @@ impl<T: NoUninit, const N: usize> StaticBuffer<T, N> {
 
     #[allow(clippy::new_without_default)]
     #[cfg(feature = "loom")]
+    /// Creates a new statical buffer.
+    ///
+    /// This is implemented for loom testing, and it is not recommended to use this in production code.
     pub fn new() -> Self {
         Self {
             buf: Buffer::new(),

@@ -3,6 +3,7 @@ use bytemuck::NoUninit;
 #[allow(clippy::len_without_is_empty)]
 /// A trait for writing data into a buffer. This is used to abstract over different types of buffers, like `Vec<T>`.
 pub trait Sink {
+    /// A type that represents the items in the buffer. This is usually `T` for a `Vec<T>`.
     type Item: NoUninit;
 
     /// Returns the current length of the buffer. For a `Vec<T>`, this is `len()`.
